@@ -1,6 +1,10 @@
 #!/bin/bash
 # Android Gradle Plugin olmadan, komut satiri araclariyla APK derler.
 set -euo pipefail
+# Yeni surum cikarirken sadece bu iki satiri degistir (versionCode her seferinde artmali)
+VERSION_CODE=3
+VERSION_NAME=1.2
+NOTES="Uygulama içi güncelleme eklendi: yeni sürüm çıkınca uygulama haber verir ve tek dokunuşla günceller."
 ANDROID_JAR=${ANDROID_JAR:-$HOME/dl/android34.jar}
 OUT=build
 rm -rf $OUT && mkdir -p $OUT/{res,gen,classes,dex}
@@ -8,7 +12,7 @@ SRC=app/src/main
 aapt2 compile --dir $SRC/res -o $OUT/res/res.zip
 sed 's|<manifest |<manifest package="com.ucuzakapat.app" |' $SRC/AndroidManifest.xml > $OUT/AndroidManifest.xml
 aapt2 link -I "$ANDROID_JAR" --manifest $OUT/AndroidManifest.xml \
-  --min-sdk-version 24 --target-sdk-version 34 --version-code 2 --version-name 1.1 \
+  --min-sdk-version 24 --target-sdk-version 34 --version-code $VERSION_CODE --version-name $VERSION_NAME \
   -o $OUT/unsigned.apk --java $OUT/gen $OUT/res/res.zip
 javac --release 8 -nowarn -encoding UTF-8 -cp "$ANDROID_JAR" -d $OUT/classes \
   $(find $SRC/java $OUT/gen -name '*.java') 2>&1 | grep -v -E 'JAVA_TOOL_OPTIONS|options? .*deprecated|warning: \[options\]|^[0-9]+ warning' || true
@@ -25,3 +29,8 @@ fi
 apksigner sign --ks "$KS" --ks-pass pass:ucuzakapat --ks-key-alias ucuzakapat --out UcuzaKapat.apk $OUT/aligned.apk
 apksigner verify --print-certs UcuzaKapat.apk | head -3
 ls -la UcuzaKapat.apk
+
+# Uygulama ici guncelleme bu dosyayi okur (GitHub'a apk/UcuzaKapat.apk ile birlikte yukle)
+mkdir -p apk && cp UcuzaKapat.apk apk/UcuzaKapat.apk
+python3 -c "import json,sys;print(json.dumps({'versionCode':int(sys.argv[1]),'versionName':sys.argv[2],'apkUrl':'https://raw.githubusercontent.com/MustafaCanDere/ucuzakapat/main/apk/UcuzaKapat.apk','notes':sys.argv[3]},ensure_ascii=False,indent=2))" "$VERSION_CODE" "$VERSION_NAME" "$NOTES" > version.json
+cat version.json

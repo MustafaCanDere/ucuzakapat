@@ -45,6 +45,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
+    public static final String ACTION_UPDATE = "com.ucuzakapat.app.OPEN_UPDATE";
     private static final int ORANGE = 0xFFF27A1A;
     private static final int GREEN = 0xFF1B8E3E;
     private static final int RED = 0xFFC62828;
@@ -75,12 +76,14 @@ public class MainActivity extends Activity {
         handleShare(getIntent());
         reload();
         if (!Store.load(this).isEmpty()) TrackerService.start(this, false);
+        Updater.checkInteractive(this, true);
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         handleShare(intent);
+        if (intent != null && ACTION_UPDATE.equals(intent.getAction())) Updater.checkInteractive(this, false);
     }
 
     @Override
@@ -181,6 +184,7 @@ public class MainActivity extends Activity {
         menu.add(0, 2, 1, "Kontrol aralığı");
         menu.add(0, 3, 2, "Pil kısıtlamasını kaldır");
         menu.add(0, 4, 3, "Takibi durdur");
+        menu.add(0, 5, 4, "Güncellemeleri kontrol et");
         return true;
     }
 
@@ -204,6 +208,10 @@ public class MainActivity extends Activity {
             case 4:
                 TrackerService.stop(this);
                 toast("Takip durduruldu. Uygulamayı açınca yeniden başlar.");
+                return true;
+            case 5:
+                toast("Kontrol ediliyor…");
+                Updater.checkInteractive(this, false);
                 return true;
         }
         return super.onOptionsItemSelected(item);

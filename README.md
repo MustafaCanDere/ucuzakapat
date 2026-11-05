@@ -14,6 +14,14 @@ birlikte bildirim gönderir. Yeni bir kampanya çıkarsa fiyat değişmese de ay
    Bu, telefonun takibi arka planda öldürmemesi için önemli (Xiaomi/Redmi'de ayrıca:
    Ayarlar → Uygulamalar → Ucuza Kapat → Otomatik başlatma: AÇIK, Pil tasarrufu: Kısıtlama yok).
 
+## Güncelleme
+1.2 ve sonrasında APK'yı elle indirmene gerek yok: uygulama açılışta ve arka planda 12 saatte bir
+GitHub'daki `version.json`'a bakar, yeni sürüm varsa "Güncelle" der, indirip kurar (Android bir kez
+"bu kaynaktan yüklemeye izin ver" ister). Menüden "Güncellemeleri kontrol et" ile elle de bakabilirsin.
+
+Yeni sürüm yayınlamak: `build.sh` başındaki `VERSION_CODE`'u artır, derle (aynı keystore ile!),
+`apk/UcuzaKapat.apk` ve `version.json`'u commit'leyip push et.
+
 ## Kullanım
 - Linki üstteki kutuya yapıştır → **Ekle**. Ya da Trendyol/Hepsiburada/Amazon uygulamasında ürünü aç →
   **Paylaş → Ucuza Kapat**.

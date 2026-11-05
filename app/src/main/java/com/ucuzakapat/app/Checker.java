@@ -25,6 +25,7 @@ public final class Checker {
                 c.sendBroadcast(new Intent(ACTION_UPDATED).setPackage(c.getPackageName()));
             }
             Store.setLastRun(c, System.currentTimeMillis());
+            Updater.backgroundCheck(c);
             c.sendBroadcast(new Intent(ACTION_UPDATED).setPackage(c.getPackageName()));
         }
     }
