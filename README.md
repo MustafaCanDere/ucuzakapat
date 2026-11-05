@@ -5,6 +5,8 @@
 birlikte bildirim gönderir. Yeni bir kampanya çıkarsa fiyat değişmese de ayrıca haber verir.
 
 ## Kurulum (APK)
+**İndir:** [apk/UcuzaKapat.apk](https://github.com/MustafaCanDere/ucuzakapat/raw/main/apk/UcuzaKapat.apk)
+
 1. `UcuzaKapat.apk` dosyasını telefona at (WhatsApp/Drive/USB).
 2. Dosyaya dokun → "Bilinmeyen kaynaklardan yüklemeye izin ver" → Yükle.
    (Play Protect "tanınmayan uygulama" uyarısı verirse "Yine de yükle" de; uygulama Play Store'da değil, o yüzden.)
