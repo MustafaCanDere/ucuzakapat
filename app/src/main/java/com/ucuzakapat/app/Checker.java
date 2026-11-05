@@ -33,7 +33,7 @@ public final class Checker {
         long now = System.currentTimeMillis();
         PriceFetcher.Result r;
         try {
-            r = PriceFetcher.fetch(p.url);
+            r = PriceFetcher.fetch(c, p.url);
         } catch (Exception e) {
             p.lastCheck = now;
             p.lastError = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();

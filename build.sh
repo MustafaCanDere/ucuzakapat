@@ -8,7 +8,7 @@ SRC=app/src/main
 aapt2 compile --dir $SRC/res -o $OUT/res/res.zip
 sed 's|<manifest |<manifest package="com.ucuzakapat.app" |' $SRC/AndroidManifest.xml > $OUT/AndroidManifest.xml
 aapt2 link -I "$ANDROID_JAR" --manifest $OUT/AndroidManifest.xml \
-  --min-sdk-version 24 --target-sdk-version 34 --version-code 1 --version-name 1.0 \
+  --min-sdk-version 24 --target-sdk-version 34 --version-code 2 --version-name 1.1 \
   -o $OUT/unsigned.apk --java $OUT/gen $OUT/res/res.zip
 javac --release 8 -nowarn -encoding UTF-8 -cp "$ANDROID_JAR" -d $OUT/classes \
   $(find $SRC/java $OUT/gen -name '*.java') 2>&1 | grep -v -E 'JAVA_TOOL_OPTIONS|options? .*deprecated|warning: \[options\]|^[0-9]+ warning' || true

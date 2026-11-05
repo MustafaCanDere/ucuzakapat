@@ -42,12 +42,39 @@ public final class PriceFetcher {
 
     private PriceFetcher() {}
 
+    /** Bu siteler duz HTTP istegini neredeyse her zaman engeller; dogrudan tarayiciyla ac. */
+    private static boolean browserFirst(String url) {
+        String h = hostOf(url);
+        return h.contains("hepsiburada") || h.contains("mediamarkt") || h.contains("teknosa")
+                || h.contains("vatanbilgisayar") || h.contains("ciceksepeti") || h.contains("boyner");
+    }
+
+    /**
+     * Once hizli yol (duz HTTP) denenir; site engellerse veya fiyat bulunamazsa sayfa
+     * gizli bir tarayicida (WebView) acilip JavaScript calistiktan sonra okunur.
+     */
+    public static Result fetch(android.content.Context ctx, String url) throws IOException {
+        IOException httpError = null;
+        if (!browserFirst(url)) {
+            try {
+                return fetch(url);
+            } catch (IOException e) {
+                httpError = e;
+            }
+        }
+        try {
+            return WebFetcher.fetch(ctx, url);
+        } catch (IOException e) {
+            throw e;
+        }
+    }
+
     public static Result fetch(String url) throws IOException {
         String html = download(url);
         Result r = parse(url, html);
         if (r.price <= 0) {
             if (looksBlocked(html)) {
-                throw new IOException("Site bot korumasina takildi, sonraki kontrolde tekrar denenecek");
+                throw new IOException("Site bot korumasina takildi");
             }
             throw new IOException("Fiyat sayfada bulunamadi");
         }
@@ -160,11 +187,13 @@ public final class PriceFetcher {
         double price = firstNumber(html,
                 "\"finalPriceOnSale\"\\s*:\\s*\"?([\\d.,]+)",
                 "\"price\"\\s*:\\s*\\{\\s*\"value\"\\s*:\\s*([\\d.]+)",
-                "\"currentPrice\"\\s*:\\s*\"?([\\d.,]+)");
+                "\"currentPrice\"\\s*:\\s*\"?([\\d.,]+)",
+                "data-test-id=\"(?:price-current-price|default-price|checkout-price)\"[^>]*>([^<]+)<");
         if (price > 0) r.price = price;
         double orig = firstNumber(html,
                 "\"originalPrice\"\\s*:\\s*\"?([\\d.,]+)",
-                "\"oldPrice\"\\s*:\\s*\"?([\\d.,]+)");
+                "\"oldPrice\"\\s*:\\s*\"?([\\d.,]+)",
+                "data-test-id=\"(?:price-prev-price|prev-price)\"[^>]*>([^<]+)<");
         if (orig > 0) r.originalPrice = orig;
         addAllMatches(html, "\"campaigns?\"\\s*:\\s*\\[(.*?)\\]", "\"(?:name|title|text)\"\\s*:\\s*\"([^\"]{3,80})\"", r);
     }
