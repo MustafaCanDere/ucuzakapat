@@ -49,6 +49,23 @@ public final class Checker {
             return;
         }
         apply(c, p, r);
+        // Fiyat degisti ama henuz dogrulanmadi: bir sonraki tura (5 dk) birakma, kisa suren
+        // indirimler kacmasin diye 20 saniye arayla hemen tekrar oku.
+        int extra = 0;
+        while (p.pendingCount > 0 && extra < 3) {
+            try {
+                Thread.sleep(20_000);
+            } catch (InterruptedException e) {
+                break;
+            }
+            try {
+                r = PriceFetcher.fetch(c, p.url);
+            } catch (Exception e) {
+                break;
+            }
+            apply(c, p, r);
+            extra++;
+        }
     }
 
     /** Okunan sonucu urune isler, gerekiyorsa bildirim atar (uygulama ici tarayici da kullanir). */

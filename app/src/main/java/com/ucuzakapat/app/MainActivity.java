@@ -50,7 +50,7 @@ public class MainActivity extends Activity {
     private static final int GREEN = 0xFF1B8E3E;
     private static final int RED = 0xFFC62828;
     private static final int GREY = 0xFF6B6B6B;
-    private static final int[] INTERVALS = {5, 10, 15, 30, 60};
+    private static final int[] INTERVALS = {1, 2, 5, 10, 15, 30, 60};
 
     private final ExecutorService exec = Executors.newSingleThreadExecutor();
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -429,7 +429,7 @@ public class MainActivity extends Activity {
         int current = Store.intervalMinutes(this);
         int sel = 0;
         for (int i = 0; i < INTERVALS.length; i++) {
-            labels[i] = INTERVALS[i] + " dakika";
+            labels[i] = INTERVALS[i] + " dakika" + (INTERVALS[i] <= 2 ? " (pil ve internet kullanımı artar)" : "");
             if (INTERVALS[i] == current) sel = i;
         }
         new AlertDialog.Builder(this)

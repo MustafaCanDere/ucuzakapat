@@ -1,6 +1,6 @@
 {
-  "versionCode": 10,
-  "versionName": "1.9",
+  "versionCode": 11,
+  "versionName": "1.10",
   "apkUrl": "https://raw.githubusercontent.com/MustafaCanDere/ucuzakapat/main/apk/UcuzaKapat.apk",
-  "notes": "Fiyat hataları düzeltildi: sayfadaki başka ürünün fiyatını okuma, sayı biçimi hataları; tek seferlik yanlış okuma artık bildirim atmıyor."
+  "notes": "Kısa süreli indirimler: büyük düşüş görülünce 20 sn arayla hemen doğrulanıp bildirim atılıyor. Kontrol aralığına 1 ve 2 dakika eklendi."
 }
