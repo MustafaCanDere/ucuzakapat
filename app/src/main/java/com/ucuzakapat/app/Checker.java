@@ -53,6 +53,11 @@ public final class Checker {
 
     /** Okunan sonucu urune isler, gerekiyorsa bildirim atar (uygulama ici tarayici da kullanir). */
     public static void apply(Context c, Product p, PriceFetcher.Result r) {
+        apply(c, p, r, false);
+    }
+
+    /** confirmed=true: kullanici fiyati ekranda kendisi gordu (uygulama ici tarayici), hemen kabul et. */
+    public static void apply(Context c, Product p, PriceFetcher.Result r, boolean confirmed) {
         long now = System.currentTimeMillis();
         p.lastCheck = now;
         p.lastError = null;
@@ -85,7 +90,25 @@ public final class Checker {
         }
 
         // 1 kurustan kucuk oynamalari yok say
-        if (Math.abs(r.price - old) >= 0.01) {
+        boolean changed = Math.abs(r.price - old) >= 0.01;
+        if (!changed) {
+            p.pendingPrice = 0;
+            p.pendingCount = 0;
+        } else if (!confirmed) {
+            // Ayni yeni fiyat ust uste gorulmeden kabul etme. Asiri degisimlerde (yari fiyat,
+            // iki kati) bir kez daha bekle: buyuk ihtimalle sayfadaki baska bir fiyat okunmustur.
+            if (Math.abs(p.pendingPrice - r.price) < 0.01) p.pendingCount++;
+            else {
+                p.pendingPrice = r.price;
+                p.pendingCount = 1;
+            }
+            boolean extreme = r.price < old * 0.5 || r.price > old * 2;
+            int need = extreme ? 3 : 2;
+            if (p.pendingCount < need) changed = false;
+        }
+        if (changed) {
+            p.pendingPrice = 0;
+            p.pendingCount = 0;
             p.previousPrice = old;
             p.currentPrice = r.price;
             p.lastChange = now;

@@ -364,12 +364,30 @@ public final class PriceFetcher {
         Result r = new Result();
         String host = hostOf(url);
 
-        if (host.contains("trendyol")) parseTrendyol(html, r);
-        else if (host.contains("hepsiburada")) parseHepsiburada(html, r);
-        else if (host.contains("amazon.")) parseAmazon(html, r);
-        else if (host.contains("n11.com")) parseN11(html, r);
+        // 1) schema.org urun verisi: sayfanin ASIL urununu tarif eder; once buna guven.
+        //    (Siteye ozel kaliplar sayfadaki ilk eslesmeyi alir; bu bazen "benzer urunler"
+        //    listesindeki baska bir urunun fiyati olabiliyordu.)
+        Result ld = new Result();
+        parseJsonLd(html, ld);
 
-        parseJsonLd(html, r);
+        Result site = new Result();
+        if (host.contains("trendyol")) parseTrendyol(html, site);
+        else if (host.contains("hepsiburada")) parseHepsiburada(html, site);
+        else if (host.contains("amazon.")) parseAmazon(html, site);
+        else if (host.contains("n11.com")) parseN11(html, site);
+
+        if (ld.price > 0) {
+            r.price = ld.price;
+            r.currency = ld.currency;
+        } else {
+            r.price = site.price;
+        }
+        r.name = ld.name != null ? ld.name : site.name;
+        r.campaigns.addAll(site.campaigns);
+        double orig = site.originalPrice > 0 ? site.originalPrice : ld.originalPrice;
+        // liste fiyati makul olmali (fiyatin 5 katindan fazla "indirim" baska urune aittir)
+        if (orig > r.price && (r.price <= 0 || orig <= r.price * 5)) r.originalPrice = orig;
+
         parseMeta(html, r);
 
         if (r.name == null) r.name = metaContent(html, "og:title");
@@ -502,11 +520,11 @@ public final class PriceFetcher {
         if (!(offers instanceof JSONObject)) return;
         JSONObject of = (JSONObject) offers;
         if (of.has("offers")) readOffers(of.opt("offers"), r);
-        double p = parseNumber(of.optString("price", ""));
-        if (p <= 0) p = parseNumber(of.optString("lowPrice", ""));
+        double p = num(of.opt("price"));
+        if (p <= 0) p = num(of.opt("lowPrice"));
         if (p <= 0) {
             JSONObject spec = of.optJSONObject("priceSpecification");
-            if (spec != null) p = parseNumber(spec.optString("price", ""));
+            if (spec != null) p = num(spec.opt("price"));
         }
         if (p > 0 && r.price <= 0) r.price = p;
         String cur = of.optString("priceCurrency", "");
@@ -618,10 +636,32 @@ public final class PriceFetcher {
     /** "value": 123.45 seklindeki ilk sayiyi bulur:  "discountedPrice":{"text":"..","value":123} */
     private static double jsonValue(String html, String key) {
         Matcher m = Pattern.compile("\"" + key + "\"\\s*:\\s*\\{[^{}]{0,300}?\"value\"\\s*:\\s*([\\d.]+)").matcher(html);
-        if (m.find()) return parseNumber(m.group(1));
+        if (m.find()) return jsonNumber(m.group(1));
         m = Pattern.compile("\"" + key + "\"\\s*:\\s*([\\d.]+)").matcher(html);
-        if (m.find()) return parseNumber(m.group(1));
+        if (m.find()) return jsonNumber(m.group(1));
         return 0;
+    }
+
+    /** JSON icindeki sayi: binlik ayirici yoktur, nokta her zaman ondaliktir (4599.000 = 4599). */
+    static double jsonNumber(String s) {
+        try {
+            return Double.parseDouble(s);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /** JSON degeri sayi ise dogrudan, metin ise Turk/Ingiliz bicimine gore cevirir. */
+    static double num(Object o) {
+        if (o instanceof Number) return ((Number) o).doubleValue();
+        if (o == null) return 0;
+        String t = String.valueOf(o).trim();
+        if (t.matches("\\d+(\\.\\d+)?")) {
+            // "1299.000" gibi: JSON-LD'de nokta ondaliktir; sadece "1.299" (tam 3 hane) belirsiz
+            if (t.matches("\\d{1,3}\\.\\d{3}")) return parseNumber(t);
+            return jsonNumber(t);
+        }
+        return parseNumber(t);
     }
 
     private static double firstNumber(String html, String... regexes) {

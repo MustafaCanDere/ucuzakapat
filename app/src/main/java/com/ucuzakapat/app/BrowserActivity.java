@@ -236,7 +236,7 @@ public class BrowserActivity extends Activity {
                 return;
             }
         }
-        Checker.apply(getApplicationContext(), p, lastResult);
+        Checker.apply(getApplicationContext(), p, lastResult, true);
         Store.update(getApplicationContext(), p);
         try {
             CookieManager.getInstance().flush();

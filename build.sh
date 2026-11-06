@@ -2,9 +2,9 @@
 # Android Gradle Plugin olmadan, komut satiri araclariyla APK derler.
 set -euo pipefail
 # Yeni surum cikarirken sadece bu iki satiri degistir (versionCode her seferinde artmali)
-VERSION_CODE=9
-VERSION_NAME=1.8
-NOTES="Yeni ana ekran: Mağazalar vitrini. Siteye uygulama içinden gir, ürünü aç, \"Takip et\"e bas; link kopyalamaya gerek yok."
+VERSION_CODE=10
+VERSION_NAME=1.9
+NOTES="Fiyat hataları düzeltildi: sayfadaki başka ürünün fiyatını okuma, sayı biçimi hataları; tek seferlik yanlış okuma artık bildirim atmıyor."
 ANDROID_JAR=${ANDROID_JAR:-$HOME/dl/android34.jar}
 OUT=build
 rm -rf $OUT && mkdir -p $OUT/{res,gen,classes,dex}

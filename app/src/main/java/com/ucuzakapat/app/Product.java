@@ -28,6 +28,11 @@ public class Product {
     public long lastChange;
     public String lastError;        // null = son kontrol basarili
 
+    // Yeni fiyat bir kez gorulunce hemen kabul edilmez; tekrar gorulurse kabul edilir.
+    // (Sayfadaki baska bir fiyatin bir kez yanlislikla okunmasi bos bildirim atmasin.)
+    public double pendingPrice;
+    public int pendingCount;
+
     /** Sitenin kendi indirim orani (liste fiyatina gore), yoksa 0. */
     public double siteDiscountPercent() {
         if (originalPrice > 0 && currentPrice > 0 && originalPrice > currentPrice) {
@@ -65,6 +70,8 @@ public class Product {
         o.put("lastCheck", lastCheck);
         o.put("lastChange", lastChange);
         if (lastError != null) o.put("lastError", lastError);
+        o.put("pendingPrice", pendingPrice);
+        o.put("pendingCount", pendingCount);
         return o;
     }
 
@@ -87,6 +94,8 @@ public class Product {
         p.lastCheck = o.optLong("lastCheck");
         p.lastChange = o.optLong("lastChange");
         p.lastError = o.has("lastError") ? o.optString("lastError") : null;
+        p.pendingPrice = o.optDouble("pendingPrice", 0);
+        p.pendingCount = o.optInt("pendingCount", 0);
         return p;
     }
 }

@@ -1,6 +1,6 @@
 {
-  "versionCode": 9,
-  "versionName": "1.8",
+  "versionCode": 10,
+  "versionName": "1.9",
   "apkUrl": "https://raw.githubusercontent.com/MustafaCanDere/ucuzakapat/main/apk/UcuzaKapat.apk",
-  "notes": "Yeni ana ekran: Mağazalar vitrini. Siteye uygulama içinden gir, ürünü aç, \"Takip et\"e bas; link kopyalamaya gerek yok."
+  "notes": "Fiyat hataları düzeltildi: sayfadaki başka ürünün fiyatını okuma, sayı biçimi hataları; tek seferlik yanlış okuma artık bildirim atmıyor."
 }
