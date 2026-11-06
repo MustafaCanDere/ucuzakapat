@@ -60,6 +60,9 @@ public class MainActivity extends Activity {
     private TextView status;
     private Adapter adapter;
     private android.widget.FrameLayout webHost;
+    private View storesPane, listPane;
+    private Button tabStores, tabList;
+    private int currentTab;
 
     private final BroadcastReceiver updated = new BroadcastReceiver() {
         @Override
@@ -127,7 +130,7 @@ public class MainActivity extends Activity {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         urlInput = new EditText(this);
-        urlInput.setHint("Ürün linkini yapıştır (Trendyol, Hepsiburada, Amazon…)");
+        urlInput.setHint("veya ürün linki yapıştır");
         urlInput.setSingleLine(true);
         urlInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         urlInput.setImeOptions(EditorInfo.IME_ACTION_DONE);
@@ -153,7 +156,39 @@ public class MainActivity extends Activity {
         status.setTextSize(12);
         status.setPadding(0, dp(6), 0, 0);
         top.addView(status);
-        root.addView(top);
+
+        // --- sekmeler
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        tabs.setBackgroundColor(Color.WHITE);
+        tabs.setPadding(dp(8), dp(8), dp(8), dp(4));
+        tabStores = tabButton("🛍  Mağazalar");
+        tabList = tabButton("⭐  Takip listem");
+        tabStores.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showTab(0);
+            }
+        });
+        tabList.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showTab(1);
+            }
+        });
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, dp(42), 1);
+        tl.rightMargin = dp(6);
+        tabs.addView(tabStores, tl);
+        tabs.addView(tabList, new LinearLayout.LayoutParams(0, dp(42), 1));
+        root.addView(tabs);
+
+        storesPane = buildStores();
+        root.addView(storesPane, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+
+        LinearLayout lpane = new LinearLayout(this);
+        lpane.setOrientation(LinearLayout.VERTICAL);
+        listPane = lpane;
+        lpane.addView(top);
 
         ListView list = new ListView(this);
         list.setDivider(null);
@@ -162,15 +197,17 @@ public class MainActivity extends Activity {
         adapter = new Adapter();
         list.setAdapter(adapter);
         TextView empty = new TextView(this);
-        empty.setText("Henüz ürün yok.\n\nÜrün linkini yukarıya yapıştır ya da Trendyol/Hepsiburada/Amazon "
-                + "uygulamasında ürünü açıp “Paylaş → Ucuza Kapat” de. Menüdeki “Siteye gir, ürün seç” ile uygulama içinden de ekleyebilirsin.\n\nUygulama fiyatı her 5 dakikada bir "
+        empty.setText("Henüz ürün yok.\n\n“Mağazalar” sekmesinden bir siteye gir, ürünü aç ve alttaki "
+                + "“Takip et”e bas. İstersen link de yapıştırabilirsin.\n\nUygulama fiyatı her 5 dakikada bir "
                 + "kontrol eder; ucuzlayınca indirim oranı ve kampanyalarla birlikte bildirim gönderir.");
         empty.setGravity(Gravity.CENTER);
         empty.setTextColor(GREY);
         empty.setPadding(dp(32), dp(48), dp(32), 0);
-        root.addView(empty, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
-        root.addView(list, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+        lpane.addView(empty, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+        lpane.addView(list, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
         list.setEmptyView(empty);
+        root.addView(lpane, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+        showTab(Store.load(this).isEmpty() ? 0 : 1);
         // Arkada, gorunmeyen tarayici alani: uygulama acikken kontroller burada yapilir
         // (bazi bot korumalari ekranda olmayan tarayicida calismiyor)
         android.widget.FrameLayout frame = new android.widget.FrameLayout(this);
@@ -180,6 +217,102 @@ public class MainActivity extends Activity {
         frame.addView(root, new android.widget.FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         return frame;
+    }
+
+    private Button tabButton(String text) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setAllCaps(false);
+        b.setTextSize(14);
+        b.setMinHeight(0);
+        b.setMinimumHeight(0);
+        return b;
+    }
+
+    private void showTab(int t) {
+        currentTab = t;
+        storesPane.setVisibility(t == 0 ? View.VISIBLE : View.GONE);
+        listPane.setVisibility(t == 1 ? View.VISIBLE : View.GONE);
+        tabStores.setBackground(rounded(t == 0 ? ORANGE : 0xFFF1F1F1, 10));
+        tabStores.setTextColor(t == 0 ? Color.WHITE : 0xFF444444);
+        tabList.setBackground(rounded(t == 1 ? ORANGE : 0xFFF1F1F1, 10));
+        tabList.setTextColor(t == 1 ? Color.WHITE : 0xFF444444);
+    }
+
+    private static final int[] TILE_COLORS = {0xFFF27A1A, 0xFFFF6000, 0xFF232F3E, 0xFF6C2BD9, 0xFF0F9D58,
+            0xFFE53935, 0xFF1E88E5, 0xFF8E24AA, 0xFF00897B, 0xFFD81B60, 0xFF3949AB, 0xFF6D4C41};
+
+    private View buildStores() {
+        LinearLayout pane = new LinearLayout(this);
+        pane.setOrientation(LinearLayout.VERTICAL);
+        TextView hint = new TextView(this);
+        hint.setText("Bir mağazaya dokun, ürünü bul, alttaki turuncu “Takip et”e bas. Fiyat düşünce haber veririm.");
+        hint.setTextColor(GREY);
+        hint.setTextSize(13);
+        hint.setPadding(dp(16), dp(10), dp(16), dp(4));
+        pane.addView(hint);
+        android.widget.GridView grid = new android.widget.GridView(this);
+        grid.setNumColumns(3);
+        grid.setVerticalSpacing(dp(10));
+        grid.setHorizontalSpacing(dp(10));
+        grid.setPadding(dp(12), dp(8), dp(12), dp(16));
+        grid.setClipToPadding(false);
+        grid.setAdapter(new BaseAdapter() {
+            @Override
+            public int getCount() {
+                return Sites.NAMES.length;
+            }
+
+            @Override
+            public Object getItem(int i) {
+                return Sites.URLS[i];
+            }
+
+            @Override
+            public long getItemId(int i) {
+                return i;
+            }
+
+            @Override
+            public View getView(final int i, View convert, ViewGroup parent) {
+                LinearLayout tile = new LinearLayout(MainActivity.this);
+                tile.setOrientation(LinearLayout.VERTICAL);
+                tile.setGravity(Gravity.CENTER_HORIZONTAL);
+                tile.setPadding(dp(4), dp(12), dp(4), dp(10));
+                tile.setBackground(rounded(Color.WHITE, 14));
+                String name = Sites.NAMES[i];
+                TextView logo = new TextView(MainActivity.this);
+                String ini = name.replaceAll("[^A-Za-zÇĞİÖŞÜçğıöşü0-9&]", "");
+                logo.setText(ini.length() > 2 ? ini.substring(0, 2) : ini);
+                logo.setTextColor(Color.WHITE);
+                logo.setTextSize(18);
+                logo.setTypeface(Typeface.DEFAULT_BOLD);
+                logo.setGravity(Gravity.CENTER);
+                GradientDrawable circle = new GradientDrawable();
+                circle.setShape(GradientDrawable.OVAL);
+                circle.setColor(TILE_COLORS[i % TILE_COLORS.length]);
+                logo.setBackground(circle);
+                tile.addView(logo, new LinearLayout.LayoutParams(dp(52), dp(52)));
+                TextView label = new TextView(MainActivity.this);
+                label.setText(name);
+                label.setTextSize(12);
+                label.setTextColor(0xFF333333);
+                label.setGravity(Gravity.CENTER);
+                label.setMaxLines(1);
+                label.setEllipsize(TextUtils.TruncateAt.END);
+                label.setPadding(0, dp(6), 0, 0);
+                tile.addView(label);
+                tile.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        BrowserActivity.open(MainActivity.this, Sites.URLS[i]);
+                    }
+                });
+                return tile;
+            }
+        });
+        pane.addView(grid, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+        return pane;
     }
 
     private GradientDrawable rounded(int color, int radiusDp) {
@@ -370,6 +503,7 @@ public class MainActivity extends Activity {
     private void reload() {
         items.clear();
         items.addAll(Store.load(this));
+        if (tabList != null) tabList.setText("⭐  Takip listem (" + items.size() + ")");
         if (adapter != null) adapter.notifyDataSetChanged();
         if (status != null) {
             long last = Store.lastRun(this);

@@ -61,7 +61,7 @@ public class BrowserActivity extends Activity {
         super.onCreate(b);
         String url = getIntent().getStringExtra(EXTRA_URL);
         if (url == null) url = "https://www.trendyol.com";
-        setTitle("Ürünü bul ve takip et");
+        setTitle("Ürünü bul, Takip et'e bas");
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -112,10 +112,13 @@ public class BrowserActivity extends Activity {
         info = new TextView(this);
         info.setTextSize(13);
         info.setTextColor(0xFF333333);
-        info.setText("Ürün sayfasını aç. Doğrulama çıkarsa normal şekilde geç.");
+        info.setText("Bir ürün aç; fiyatı burada görünecek.");
         bar.addView(info, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         follow = new Button(this);
-        follow.setText("Takip et");
+        follow.setText("⭐ Takip et");
+        follow.setTextSize(16);
+        follow.setAllCaps(false);
+        follow.setPadding(dp(18), 0, dp(18), 0);
         follow.setTextColor(Color.WHITE);
         GradientDrawable g = new GradientDrawable();
         g.setColor(ORANGE);
@@ -129,7 +132,7 @@ public class BrowserActivity extends Activity {
                 followCurrent();
             }
         });
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(50));
         lp.leftMargin = dp(8);
         bar.addView(follow, lp);
         root.addView(bar);
@@ -174,9 +177,13 @@ public class BrowserActivity extends Activity {
                     if (!r.campaigns.isEmpty()) sb.append("\n🎁 ").append(r.campaigns.get(0));
                     info.setText(sb.toString());
                     Product existing = findByUrl(url);
-                    follow.setText(existing != null ? "Güncelle" : "Takip et");
                     follow.setEnabled(true);
                     follow.setAlpha(1f);
+                    if (existing != null) markFollowed();
+                    else {
+                        follow.setText("⭐ Takip et");
+                        follow.setBackground(btnBg(ORANGE));
+                    }
                 } else {
                     lastResult = null;
                     follow.setEnabled(false);
@@ -187,6 +194,18 @@ public class BrowserActivity extends Activity {
                 }
             }
         });
+    }
+
+    private void markFollowed() {
+        follow.setText("✓ Takipte");
+        follow.setBackground(btnBg(0xFF1B8E3E));
+    }
+
+    private GradientDrawable btnBg(int color) {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(color);
+        g.setCornerRadius(dp(10));
+        return g;
     }
 
     private Product findByUrl(String url) {
@@ -225,9 +244,9 @@ public class BrowserActivity extends Activity {
         }
         sendBroadcast(new Intent(Checker.ACTION_UPDATED).setPackage(getPackageName()));
         TrackerService.start(this, false);
-        Toast.makeText(this, "Takipte: " + Notifier.money(lastResult.price, lastResult.currency),
-                Toast.LENGTH_LONG).show();
-        finish();
+        Toast.makeText(this, "Takip listene eklendi: " + Notifier.money(lastResult.price, lastResult.currency)
+                + "\nUcuzlayınca bildirim gelecek.", Toast.LENGTH_LONG).show();
+        markFollowed();
     }
 
     @Override

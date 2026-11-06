@@ -1,6 +1,6 @@
 {
-  "versionCode": 8,
-  "versionName": "1.7",
+  "versionCode": 9,
+  "versionName": "1.8",
   "apkUrl": "https://raw.githubusercontent.com/MustafaCanDere/ucuzakapat/main/apk/UcuzaKapat.apk",
-  "notes": "\"Böyle bir ürün yok\" hatası düzeltildi (paylaşım linkleri gerçek ürün linkine çevriliyor, tarayıcı kimliği düzeltildi). 38 alışveriş sitesi listede."
+  "notes": "Yeni ana ekran: Mağazalar vitrini. Siteye uygulama içinden gir, ürünü aç, \"Takip et\"e bas; link kopyalamaya gerek yok."
 }
