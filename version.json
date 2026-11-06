@@ -1,6 +1,6 @@
 {
-  "versionCode": 7,
-  "versionName": "1.6",
+  "versionCode": 8,
+  "versionName": "1.7",
   "apkUrl": "https://raw.githubusercontent.com/MustafaCanDere/ucuzakapat/main/apk/UcuzaKapat.apk",
-  "notes": "Hata düzeltmeleri: fiyatı gelmeyen kartta \"Uygulamada aç\" ve \"Hata raporu gönder\" butonları; uzun kontrollerin yarıda kesilmesi ve eski verinin üzerine yazılması düzeltildi."
+  "notes": "\"Böyle bir ürün yok\" hatası düzeltildi (paylaşım linkleri gerçek ürün linkine çevriliyor, tarayıcı kimliği düzeltildi). 38 alışveriş sitesi listede."
 }

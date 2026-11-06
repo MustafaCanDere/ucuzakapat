@@ -34,6 +34,11 @@ public final class Checker {
     }
 
     public static void checkOne(Context c, Product p) {
+        // Eski surumlerde kisa/paylasim linki oldugu gibi kaydediliyordu: gercek linke cevir
+        if (UrlTools.isShortLink(p.url)) {
+            String real = UrlTools.resolve(p.url);
+            if (real != null && !real.equals(p.url) && !UrlTools.isShortLink(real)) p.url = real;
+        }
         long now = System.currentTimeMillis();
         PriceFetcher.Result r;
         try {

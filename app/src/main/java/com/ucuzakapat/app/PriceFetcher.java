@@ -52,7 +52,8 @@ public final class PriceFetcher {
         try {
             String ua = android.webkit.WebSettings.getDefaultUserAgent(ctx);
             if (ua != null && ua.length() > 20) {
-                UA = ua.replace("; wv)", ")").replace("Version/4.0 ", "");
+                UA = ua; // uygulama ici tarayiciyla ayni kimlik, ayni cerezler
+
             }
         } catch (Throwable ignored) {
         }
@@ -62,8 +63,12 @@ public final class PriceFetcher {
     /** Bu siteler duz HTTP istegini neredeyse her zaman engeller; dogrudan tarayiciyla ac. */
     private static boolean browserFirst(String url) {
         String h = hostOf(url);
-        return h.contains("hepsiburada") || h.contains("mediamarkt") || h.contains("teknosa")
-                || h.contains("vatanbilgisayar") || h.contains("ciceksepeti") || h.contains("boyner");
+        // Bu siteler sayfayi JavaScript ile olusturuyor ya da duz istegi engelliyor
+        String[] js = {"hepsiburada", "mediamarkt", "teknosa", "vatanbilgisayar", "ciceksepeti", "boyner",
+                "beymen", "lcw.com", "koton", "defacto", "mavi.com", "flo.com.tr", "migros", "a101", "sokmarket",
+                "carrefoursa", "ikea", "decathlon", "pazarama", "idefix", "watsons", "gratis", "apple.com"};
+        for (String k : js) if (h.contains(k)) return true;
+        return false;
     }
 
     /**
@@ -260,10 +265,16 @@ public final class PriceFetcher {
         for (int hop = 0; hop < 6; hop++) {
             HttpURLConnection con = open(url);
             con.setRequestMethod("GET");
+            con.setConnectTimeout(10000);
+            con.setReadTimeout(10000);
             int code = con.getResponseCode();
             String loc = con.getHeaderField("Location");
             con.disconnect();
             if (code >= 300 && code < 400 && loc != null) {
+                if (!loc.startsWith("http")) {
+                    String fb = UrlTools.fallbackFromAppLink(loc);
+                    return fb != null ? fb : url;
+                }
                 url = new URL(new URL(url), loc).toString();
             } else {
                 return url;

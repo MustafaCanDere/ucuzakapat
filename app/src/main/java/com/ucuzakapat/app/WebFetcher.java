@@ -112,8 +112,9 @@ public final class WebFetcher {
         s.setDatabaseEnabled(true);
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
-        String ua = s.getUserAgentString();
-        if (ua != null) s.setUserAgentString(ua.replace("; wv)", ")").replace("Version/4.0 ", ""));
+        // Tarayici kimligini DEGISTIRMIYORUZ: WebView kendini "Android WebView" olarak da
+        // bildiriyor (Sec-CH-UA). Kimlik Chrome gibi gosterilirse bu tutarsizlik bot
+        // korumalarina yakalanip "urun bulunamadi" / bos sayfa donmesine yol aciyordu.
         CookieManager cm = CookieManager.getInstance();
         cm.setAcceptCookie(true);
         cm.setAcceptThirdPartyCookies(wv, true);

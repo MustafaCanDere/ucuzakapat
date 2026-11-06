@@ -257,9 +257,8 @@ public class MainActivity extends Activity {
     }
 
     private void pickSite() {
-        final String[] names = {"Trendyol", "Hepsiburada", "Amazon", "n11", "MediaMarkt", "Teknosa"};
-        final String[] urls = {"https://www.trendyol.com", "https://www.hepsiburada.com", "https://www.amazon.com.tr",
-                "https://www.n11.com", "https://www.mediamarkt.com.tr", "https://www.teknosa.com"};
+        final String[] names = Sites.NAMES;
+        final String[] urls = Sites.URLS;
         new AlertDialog.Builder(this)
                 .setTitle("Hangi site?")
                 .setItems(names, new DialogInterface.OnClickListener() {
@@ -323,32 +322,37 @@ public class MainActivity extends Activity {
         intent.setAction(null);
     }
 
-    private static String extractUrl(String text) {
-        Matcher m = Pattern.compile("https?://\\S+").matcher(text);
-        if (m.find()) return m.group().replaceAll("[)\\]>,.]+$", "");
-        String t = text.trim();
-        if (t.contains(".") && !t.contains(" ")) return "https://" + t;
-        return null;
-    }
-
     private void addUrl(String text) {
-        final String url = extractUrl(text == null ? "" : text);
-        if (url == null) {
+        final String raw = UrlTools.extract(text == null ? "" : text);
+        if (raw == null) {
             toast("Geçerli bir link bulunamadı");
             return;
         }
-        final Product p = Store.add(this, url);
-        if (p == null) {
-            toast("Bu ürün zaten listede");
-            return;
-        }
         urlInput.setText("");
-        reload();
-        toast("Eklendi, fiyat okunuyor…");
+        toast("Link kontrol ediliyor…");
         askIgnoreBatteryOptimizations(false);
         exec.execute(new Runnable() {
             @Override
             public void run() {
+                // Kisa/paylasim linkini gercek urun linkine cevir
+                String url = UrlTools.resolve(raw);
+                final Product p = Store.add(getApplicationContext(), url);
+                if (p == null) {
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            toast("Bu ürün zaten listede");
+                        }
+                    });
+                    return;
+                }
+                ui.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        reload();
+                        toast("Eklendi, fiyat okunuyor…");
+                    }
+                });
                 Checker.checkOne(getApplicationContext(), p);
                 Store.update(getApplicationContext(), p);
                 ui.post(new Runnable() {

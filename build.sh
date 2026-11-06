@@ -2,9 +2,9 @@
 # Android Gradle Plugin olmadan, komut satiri araclariyla APK derler.
 set -euo pipefail
 # Yeni surum cikarirken sadece bu iki satiri degistir (versionCode her seferinde artmali)
-VERSION_CODE=7
-VERSION_NAME=1.6
-NOTES="Hata düzeltmeleri: fiyatı gelmeyen kartta \"Uygulamada aç\" ve \"Hata raporu gönder\" butonları; uzun kontrollerin yarıda kesilmesi ve eski verinin üzerine yazılması düzeltildi."
+VERSION_CODE=8
+VERSION_NAME=1.7
+NOTES="\"Böyle bir ürün yok\" hatası düzeltildi (paylaşım linkleri gerçek ürün linkine çevriliyor, tarayıcı kimliği düzeltildi). 38 alışveriş sitesi listede."
 ANDROID_JAR=${ANDROID_JAR:-$HOME/dl/android34.jar}
 OUT=build
 rm -rf $OUT && mkdir -p $OUT/{res,gen,classes,dex}

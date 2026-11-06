@@ -76,8 +76,11 @@ public class BrowserActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 String u = req.getUrl().toString();
-                // uygulama linklerini (trendyol://, intent:// vb.) acmaya calisma
-                return !(u.startsWith("http://") || u.startsWith("https://"));
+                if (u.startsWith("http://") || u.startsWith("https://")) return false;
+                // Site uygulamayi acmaya calisiyor (intent://, trendyol:// ...): web karsiligini ac
+                String fb = UrlTools.fallbackFromAppLink(u);
+                if (fb != null) view.loadUrl(fb);
+                return true;
             }
 
             @Override
@@ -203,6 +206,10 @@ public class BrowserActivity extends Activity {
     private void followCurrent() {
         if (lastResult == null || lastUrl == null) return;
         Product p = findByUrl(lastUrl);
+        if (p != null && !p.url.equals(lastUrl) && lastUrl.startsWith("http")) {
+            // Kayitli link bozuk/kisa link olabilir: dogru sayfanin linkini kaydet
+            p.url = UrlTools.clean(lastUrl);
+        }
         if (p == null) {
             p = Store.add(this, lastUrl);
             if (p == null) {
