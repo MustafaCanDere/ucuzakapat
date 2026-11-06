@@ -90,6 +90,16 @@ public final class PriceFetcher {
         try {
             return WebFetcher.fetch(ctx, url);
         } catch (IOException e) {
+            // Hepsiburada: urun sayfasi engellenirse, ayni urunu arama sayfasindan oku
+            // (arama sonuclari sunucuda hazirlanir ve koruma daha gevsek)
+            String sku = hepsiburadaSku(url);
+            if (sku != null) {
+                try {
+                    Result r = hepsiburadaSearch(ctx, sku);
+                    if (r != null && r.price > 0) return r;
+                } catch (Exception ignored) {
+                }
+            }
             String m = e.getMessage();
             if (firstError != null && m != null && m.startsWith("Sayfa açılamadı")) m = firstError;
             throw new IOException(m + " — ürüne dokunup uygulama içinde bir kez aç, sonra tekrar dene");
@@ -106,6 +116,75 @@ public final class PriceFetcher {
             throw new IOException("Sayfa açıldı ama fiyat bulunamadı");
         }
         return r;
+    }
+
+    // ---- Hepsiburada arama sayfasi yedegi
+    private static final Pattern HB_SKU = Pattern.compile("-p[m]?-([A-Za-z0-9]{8,20})");
+
+    /** ornek: .../kulaklik-p-HBCV00004X8Y9Z  ->  HBCV00004X8Y9Z */
+    static String hepsiburadaSku(String url) {
+        if (!hostOf(url).contains("hepsiburada")) return null;
+        String path = url;
+        int q = path.indexOf('?');
+        if (q > 0) path = path.substring(0, q);
+        Matcher m = HB_SKU.matcher(path);
+        String last = null;
+        while (m.find()) last = m.group(1);
+        return last == null ? null : last.toUpperCase(Locale.ROOT);
+    }
+
+    static Result hepsiburadaSearch(android.content.Context ctx, String sku) throws Exception {
+        String searchUrl = "https://www.hepsiburada.com/ara?q=" + sku;
+        // 1) duz HTTP
+        try {
+            String html = download(searchUrl);
+            Result r = priceNearSku(html, sku);
+            if (r != null) return r;
+        } catch (IOException ignored) {
+        }
+        // 2) tarayici: arama sayfasinda tek urun cikar, ekrandaki fiyat o urunundur
+        Result r = WebFetcher.fetch(ctx, searchUrl);
+        if (r != null && r.price > 0) {
+            r.name = null; // arama sayfasinin basligi urun adi degil; mevcut adi koru
+            return r;
+        }
+        return null;
+    }
+
+    private static final Pattern TL_PRICE = Pattern.compile("(\\d{1,3}(?:\\.\\d{3})*,\\d{2})\\s*(?:TL|₺)");
+    private static final Pattern JSON_PRICE = Pattern.compile(
+            "\"(?:finalPrice|price|currentPrice|salePrice|value)\"\\s*:\\s*\"?(\\d+(?:[.,]\\d+)?)");
+
+    /** HTML'de SKU'nun gectigi yerin hemen yakinindaki fiyati bulur. */
+    static Result priceNearSku(String html, String sku) {
+        String h = html;
+        String up = h.toUpperCase(Locale.ROOT);
+        int idx = 0;
+        while ((idx = up.indexOf(sku, idx)) >= 0) {
+            int a = Math.max(0, idx - 1500), b = Math.min(h.length(), idx + 5000);
+            String win = h.substring(a, b);
+            Matcher m = TL_PRICE.matcher(win);
+            double best = 0;
+            if (m.find()) best = parseNumber(m.group(1));
+            if (best <= 0) {
+                Matcher j = JSON_PRICE.matcher(win);
+                while (j.find()) {
+                    double v = parseNumber(j.group(1));
+                    if (v > 1) {
+                        best = v;
+                        break;
+                    }
+                }
+            }
+            if (best > 0) {
+                Result r = new Result();
+                r.price = best;
+                findCampaigns(win, r);
+                return r;
+            }
+            idx += sku.length();
+        }
+        return null;
     }
 
     // ---- Trendyol urun API'si (sayfa yerine JSON; bot korumasina daha az takilir)

@@ -1,6 +1,6 @@
 {
-  "versionCode": 5,
-  "versionName": "1.4",
+  "versionCode": 6,
+  "versionName": "1.5",
   "apkUrl": "https://raw.githubusercontent.com/MustafaCanDere/ucuzakapat/main/apk/UcuzaKapat.apk",
-  "notes": "Yanlış \"bot koruması\" uyarısı düzeltildi. Ürüne uzun basıp \"Hata raporu gönder\" ile sorunu tek dokunuşla iletebilirsin."
+  "notes": "Hepsiburada: ürün sayfası engellenirse fiyat aynı ürünün arama sonucundan okunuyor. Hata raporu da duruyor."
 }
