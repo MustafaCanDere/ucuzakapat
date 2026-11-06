@@ -91,7 +91,7 @@ public final class PriceFetcher {
             return WebFetcher.fetch(ctx, url);
         } catch (IOException e) {
             String m = e.getMessage();
-            if (firstError != null && m != null && m.startsWith("Sayfa")) m = firstError;
+            if (firstError != null && m != null && m.startsWith("Sayfa açılamadı")) m = firstError;
             throw new IOException(m + " — ürüne dokunup uygulama içinde bir kez aç, sonra tekrar dene");
         }
     }
@@ -103,7 +103,7 @@ public final class PriceFetcher {
             if (looksBlocked(html)) {
                 throw new IOException("Site bot korumasına takıldı");
             }
-            throw new IOException("Fiyat sayfada bulunamadı");
+            throw new IOException("Sayfa açıldı ama fiyat bulunamadı");
         }
         return r;
     }
@@ -193,7 +193,7 @@ public final class PriceFetcher {
         return url;
     }
 
-    private static HttpURLConnection open(String url) throws IOException {
+    static HttpURLConnection open(String url) throws IOException {
         HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
         con.setInstanceFollowRedirects(false);
         con.setConnectTimeout(20000);
@@ -250,11 +250,22 @@ public final class PriceFetcher {
         throw new IOException("Cok fazla yonlendirme");
     }
 
-    private static boolean looksBlocked(String html) {
-        String h = html.toLowerCase(Locale.ROOT);
-        return h.contains("captcha") || h.contains("robot olmadiginizi")
-                || h.contains("robot olmadığınızı") || h.contains("access denied")
-                || h.contains("are you a human") || h.length() < 2000;
+    /**
+     * Sadece gercek bot/dogrulama sayfalarini yakalar. Normal sayfalarda da "captcha",
+     * "robot" gibi kelimeler gecer (giris formu, robot supurge...), onlara bakmiyoruz.
+     */
+    static boolean looksBlocked(String html) {
+        String h = html.toLowerCase(new Locale("tr"));
+        String title = "";
+        Matcher m = Pattern.compile("<title[^>]*>([^<]*)</title>").matcher(h);
+        if (m.find()) title = m.group(1);
+        String[] titles = {"just a moment", "bir dakika", "attention required", "access denied", "erişim engellendi",
+                "pardon our interruption", "robot", "captcha", "doğrulama", "security check", "güvenlik kontrol",
+                "are you a human", "request rejected", "forbidden"};
+        for (String t : titles) if (title.contains(t)) return true;
+        return h.contains("cf-challenge") || h.contains("challenge-platform") || h.contains("_incapsula_")
+                || h.contains("px-captcha") || h.contains("/_sec/cp_challenge") || h.contains("sec-if-cpt-container")
+                || (h.length() < 3000 && (h.contains("captcha") || h.contains("robot")));
     }
 
     // ---------------------------------------------------------------- ayrıştırma

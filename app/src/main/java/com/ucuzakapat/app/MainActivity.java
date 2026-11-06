@@ -232,6 +232,30 @@ public class MainActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
+    private void sendReport(final Product p) {
+        toast("Rapor hazırlanıyor, 1 dakika kadar sürebilir…");
+        exec.execute(new Runnable() {
+            @Override
+            public void run() {
+                final String report = Diagnostics.run(getApplicationContext(), p.url);
+                ui.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            android.content.ClipboardManager cm =
+                                    (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                            cm.setPrimaryClip(android.content.ClipData.newPlainText("Ucuza Kapat rapor", report));
+                        } catch (Exception ignored) {
+                        }
+                        Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain")
+                                .putExtra(Intent.EXTRA_TEXT, report);
+                        startActivity(Intent.createChooser(send, "Raporu gönder (panoya da kopyalandı)"));
+                    }
+                });
+            }
+        });
+    }
+
     private void pickSite() {
         final String[] names = {"Trendyol", "Hepsiburada", "Amazon", "n11", "MediaMarkt", "Teknosa"};
         final String[] urls = {"https://www.trendyol.com", "https://www.hepsiburada.com", "https://www.amazon.com.tr",
@@ -256,6 +280,12 @@ public class MainActivity extends Activity {
                     @Override
                     public void onClick(DialogInterface d, int w) {
                         BrowserActivity.open(MainActivity.this, p.url);
+                    }
+                })
+                .setNeutralButton("Hata raporu", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int w) {
+                        sendReport(p);
                     }
                 })
                 .setNegativeButton("Sonra", null)
@@ -351,13 +381,14 @@ public class MainActivity extends Activity {
     private void confirmDelete(final Product p) {
         new AlertDialog.Builder(this)
                 .setTitle(p.name != null ? p.name : p.url)
-                .setItems(new String[]{"Uygulamada aç", "Şimdi kontrol et", "Takipten çıkar", "Tarayıcıda aç"},
+                .setItems(new String[]{"Uygulamada aç", "Şimdi kontrol et", "Takipten çıkar", "Tarayıcıda aç", "Hata raporu gönder"},
                         new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface d, int which) {
                                 if (which == 0) BrowserActivity.open(MainActivity.this, p.url);
                                 else if (which == 1) checkSingle(p);
                                 else if (which == 3) openUrl(p.url);
+                                else if (which == 4) sendReport(p);
                                 else {
                                     Store.remove(MainActivity.this, p.id);
                                     reload();

@@ -40,6 +40,9 @@ public final class WebFetcher {
     private static final long TIMEOUT_MS = 40_000;
     private static final long POLL_MS = 2_000;
 
+    /** Son okunan sayfanin ozeti (hata raporu icin). */
+    static volatile JSONObject lastExtract;
+
     private static WeakReference<ViewGroup> host = new WeakReference<ViewGroup>(null);
 
     /** Sayfanin tum verisini tek seferde toplayan JavaScript. */
@@ -47,7 +50,11 @@ public final class WebFetcher {
             "(function(){var o={html:document.documentElement.outerHTML,title:document.title,url:location.href,"
             + "price:null,old:null,blocked:false};"
             + "try{var bt=(document.body&&document.body.innerText||'').toLowerCase();"
-            + "o.blocked=/robot|captcha|doğrula|dogrula|verify you are|access denied|güvenlik kontrol/.test(bt.slice(0,3000));"
+            + "var tl=(document.title||'').toLowerCase();o.text=bt.replace(/\\s+/g,' ').slice(0,700);"
+            + "o.ld=document.querySelectorAll('script[type=\"application/ld+json\"]').length;"
+            + "o.blocked=/just a moment|bir dakika|attention required|access denied|erişim engellendi|pardon our|robot|captcha|doğrulama|güvenlik kontrol|security check/.test(tl)"
+            + "||!!document.querySelector('#challenge-form,#cf-challenge-running,.cf-turnstile,#px-captcha,#sec-if-cpt-container,iframe[src*=captcha],iframe[src*=challenge]')"
+            + "||(bt.length<1500&&/robot|captcha|doğrula|verify you are/.test(bt));"
             + "var re=/^\\s*(?:₺\\s*)?(\\d{1,3}(?:[.\\s]\\d{3})+(?:,\\d{1,2})?|\\d+(?:,\\d{1,2})?)\\s*(?:TL|₺|TRY)?\\s*$/;"
             + "var best=null,bs=0,old=null,os=0;var els=document.querySelectorAll('body *');"
             + "for(var i=0;i<els.length&&i<25000;i++){var e=els[i];if(e.children.length>4)continue;"
@@ -123,6 +130,7 @@ public final class WebFetcher {
         final boolean[] blocked = new boolean[1];
         final boolean[] loaded = new boolean[1];
         final WebView[] holder = new WebView[1];
+        lastExtract = null;
         final long deadline = System.currentTimeMillis() + TIMEOUT_MS;
         final Runnable[] pollRef = new Runnable[1];
 
@@ -157,6 +165,7 @@ public final class WebFetcher {
                                     JSONObject o = decode(value);
                                     if (o != null) {
                                         loaded[0] = true;
+                                        lastExtract = o;
                                         blocked[0] = o.optBoolean("blocked");
                                         PriceFetcher.Result r = toResult(url, o);
                                         if (r.price > 0) {
@@ -223,6 +232,6 @@ public final class WebFetcher {
         if (result[0] != null) return result[0];
         if (!loaded[0]) throw new IOException("Sayfa açılamadı (internet bağlantısını kontrol et)");
         if (blocked[0]) throw new IOException("Site bot doğrulaması istiyor");
-        throw new IOException("Fiyat sayfada bulunamadı");
+        throw new IOException("Sayfa açıldı ama fiyat bulunamadı");
     }
 }
