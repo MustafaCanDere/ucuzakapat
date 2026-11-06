@@ -61,6 +61,11 @@ public final class Store {
         }
     }
 
+    public static Product get(Context c, String id) {
+        for (Product p : load(c)) if (p.id.equals(id)) return p;
+        return null;
+    }
+
     public static Product add(Context c, String url) {
         synchronized (LOCK) {
             List<Product> list = load(c);

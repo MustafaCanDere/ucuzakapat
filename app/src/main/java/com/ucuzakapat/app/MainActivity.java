@@ -562,6 +562,31 @@ public class MainActivity extends Activity {
             foot.setText(f);
             card.addView(foot);
 
+            if (p.lastError != null) {
+                LinearLayout btns = new LinearLayout(MainActivity.this);
+                btns.setOrientation(LinearLayout.HORIZONTAL);
+                btns.setPadding(0, dp(8), 0, 0);
+                Button openIn = smallButton("Uygulamada aç", ORANGE, Color.WHITE);
+                openIn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        BrowserActivity.open(MainActivity.this, p.url);
+                    }
+                });
+                Button report = smallButton("Hata raporu gönder", 0xFFEEEEEE, 0xFF333333);
+                report.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        sendReport(p);
+                    }
+                });
+                LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(0, dp(38), 1);
+                bl.rightMargin = dp(8);
+                btns.addView(openIn, bl);
+                btns.addView(report, new LinearLayout.LayoutParams(0, dp(38), 1));
+                card.addView(btns);
+            }
+
             card.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -582,6 +607,19 @@ public class MainActivity extends Activity {
                     ViewGroup.LayoutParams.WRAP_CONTENT));
             return wrap;
         }
+    }
+
+    private Button smallButton(String text, int bg, int fg) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setAllCaps(false);
+        b.setTextSize(13);
+        b.setTextColor(fg);
+        b.setPadding(dp(8), 0, dp(8), 0);
+        b.setMinHeight(0);
+        b.setMinimumHeight(0);
+        b.setBackground(rounded(bg, 8));
+        return b;
     }
 
     private void elevate(View v) {

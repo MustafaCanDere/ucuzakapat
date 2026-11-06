@@ -81,7 +81,7 @@ public class TrackerService extends Service {
     private void runCheck(final Context app) {
         PowerManager pm = (PowerManager) app.getSystemService(Context.POWER_SERVICE);
         final PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "UcuzaKapat:check");
-        wl.acquire(4 * 60_000L);
+        wl.acquire(15 * 60_000L);
         EXEC.execute(new Runnable() {
             @Override
             public void run() {

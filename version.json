@@ -1,6 +1,6 @@
 {
-  "versionCode": 6,
-  "versionName": "1.5",
+  "versionCode": 7,
+  "versionName": "1.6",
   "apkUrl": "https://raw.githubusercontent.com/MustafaCanDere/ucuzakapat/main/apk/UcuzaKapat.apk",
-  "notes": "Hepsiburada: ürün sayfası engellenirse fiyat aynı ürünün arama sonucundan okunuyor. Hata raporu da duruyor."
+  "notes": "Hata düzeltmeleri: fiyatı gelmeyen kartta \"Uygulamada aç\" ve \"Hata raporu gönder\" butonları; uzun kontrollerin yarıda kesilmesi ve eski verinin üzerine yazılması düzeltildi."
 }

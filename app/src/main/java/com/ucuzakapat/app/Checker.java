@@ -19,7 +19,10 @@ public final class Checker {
         Context c = ctx.getApplicationContext();
         synchronized (RUN_LOCK) {
             List<Product> list = Store.load(c);
-            for (Product p : list) {
+            for (Product stale : list) {
+                // Kontrol suresince kullanici urunu silmis/guncellemis olabilir: en guncel halini al
+                Product p = Store.get(c, stale.id);
+                if (p == null) continue;
                 checkOne(c, p);
                 Store.update(c, p);
                 c.sendBroadcast(new Intent(ACTION_UPDATED).setPackage(c.getPackageName()));
