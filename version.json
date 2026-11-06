@@ -1,6 +1,6 @@
 {
-  "versionCode": 3,
-  "versionName": "1.2",
+  "versionCode": 4,
+  "versionName": "1.3",
   "apkUrl": "https://raw.githubusercontent.com/MustafaCanDere/ucuzakapat/main/apk/UcuzaKapat.apk",
-  "notes": "Uygulama içi güncelleme eklendi: yeni sürüm çıkınca uygulama haber verir ve tek dokunuşla günceller."
+  "notes": "Fiyat okuma düzeltildi: uygulama içi tarayıcı, bot doğrulamasını bir kez geçince arka plan kontrolleri de çalışır; ekranda görünen fiyatı okuma; Trendyol için daha sağlam yöntem."
 }

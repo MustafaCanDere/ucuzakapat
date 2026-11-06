@@ -59,6 +59,7 @@ public class MainActivity extends Activity {
     private EditText urlInput;
     private TextView status;
     private Adapter adapter;
+    private android.widget.FrameLayout webHost;
 
     private final BroadcastReceiver updated = new BroadcastReceiver() {
         @Override
@@ -93,11 +94,13 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(updated, f, Context.RECEIVER_NOT_EXPORTED);
         else registerReceiver(updated, f);
         reload();
+        WebFetcher.setHost(webHost);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        WebFetcher.setHost(null);
         try {
             unregisterReceiver(updated);
         } catch (Exception ignored) {
@@ -160,7 +163,7 @@ public class MainActivity extends Activity {
         list.setAdapter(adapter);
         TextView empty = new TextView(this);
         empty.setText("Henüz ürün yok.\n\nÜrün linkini yukarıya yapıştır ya da Trendyol/Hepsiburada/Amazon "
-                + "uygulamasında ürünü açıp “Paylaş → Ucuza Kapat” de.\n\nUygulama fiyatı her 5 dakikada bir "
+                + "uygulamasında ürünü açıp “Paylaş → Ucuza Kapat” de. Menüdeki “Siteye gir, ürün seç” ile uygulama içinden de ekleyebilirsin.\n\nUygulama fiyatı her 5 dakikada bir "
                 + "kontrol eder; ucuzlayınca indirim oranı ve kampanyalarla birlikte bildirim gönderir.");
         empty.setGravity(Gravity.CENTER);
         empty.setTextColor(GREY);
@@ -168,7 +171,15 @@ public class MainActivity extends Activity {
         root.addView(empty, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
         root.addView(list, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
         list.setEmptyView(empty);
-        return root;
+        // Arkada, gorunmeyen tarayici alani: uygulama acikken kontroller burada yapilir
+        // (bazi bot korumalari ekranda olmayan tarayicida calismiyor)
+        android.widget.FrameLayout frame = new android.widget.FrameLayout(this);
+        webHost = new android.widget.FrameLayout(this);
+        frame.addView(webHost, new android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        frame.addView(root, new android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        return frame;
     }
 
     private GradientDrawable rounded(int color, int radiusDp) {
@@ -185,6 +196,7 @@ public class MainActivity extends Activity {
         menu.add(0, 3, 2, "Pil kısıtlamasını kaldır");
         menu.add(0, 4, 3, "Takibi durdur");
         menu.add(0, 5, 4, "Güncellemeleri kontrol et");
+        menu.add(0, 6, 1, "Siteye gir, ürün seç");
         return true;
     }
 
@@ -209,12 +221,45 @@ public class MainActivity extends Activity {
                 TrackerService.stop(this);
                 toast("Takip durduruldu. Uygulamayı açınca yeniden başlar.");
                 return true;
+            case 6:
+                pickSite();
+                return true;
             case 5:
                 toast("Kontrol ediliyor…");
                 Updater.checkInteractive(this, false);
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void pickSite() {
+        final String[] names = {"Trendyol", "Hepsiburada", "Amazon", "n11", "MediaMarkt", "Teknosa"};
+        final String[] urls = {"https://www.trendyol.com", "https://www.hepsiburada.com", "https://www.amazon.com.tr",
+                "https://www.n11.com", "https://www.mediamarkt.com.tr", "https://www.teknosa.com"};
+        new AlertDialog.Builder(this)
+                .setTitle("Hangi site?")
+                .setItems(names, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int which) {
+                        BrowserActivity.open(MainActivity.this, urls[which]);
+                    }
+                })
+                .show();
+    }
+
+    private void offerBrowser(final Product p) {
+        new AlertDialog.Builder(this)
+                .setTitle("Fiyat okunamadı")
+                .setMessage(p.lastError + "\n\nÜrünü uygulama içinde açayım mı? Site doğrulama isterse geç, "
+                        + "fiyat görününce \"Güncelle\"ye bas. Sonraki kontroller de bu doğrulamayı kullanır.")
+                .setPositiveButton("Aç", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int w) {
+                        BrowserActivity.open(MainActivity.this, p.url);
+                    }
+                })
+                .setNegativeButton("Sonra", null)
+                .show();
     }
 
     private void pickInterval() {
@@ -280,7 +325,7 @@ public class MainActivity extends Activity {
                     @Override
                     public void run() {
                         reload();
-                        if (p.lastError != null) toast("Fiyat okunamadı: " + p.lastError);
+                        if (p.lastError != null && !isFinishing()) offerBrowser(p);
                         TrackerService.start(MainActivity.this, false);
                     }
                 });
@@ -306,12 +351,13 @@ public class MainActivity extends Activity {
     private void confirmDelete(final Product p) {
         new AlertDialog.Builder(this)
                 .setTitle(p.name != null ? p.name : p.url)
-                .setItems(new String[]{"Sitede aç", "Şimdi kontrol et", "Takipten çıkar"},
+                .setItems(new String[]{"Uygulamada aç", "Şimdi kontrol et", "Takipten çıkar", "Tarayıcıda aç"},
                         new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface d, int which) {
-                                if (which == 0) openUrl(p.url);
+                                if (which == 0) BrowserActivity.open(MainActivity.this, p.url);
                                 else if (which == 1) checkSingle(p);
+                                else if (which == 3) openUrl(p.url);
                                 else {
                                     Store.remove(MainActivity.this, p.id);
                                     reload();
@@ -333,6 +379,7 @@ public class MainActivity extends Activity {
                     @Override
                     public void run() {
                         reload();
+                        if (p.lastError != null && !isFinishing()) offerBrowser(p);
                     }
                 });
             }
@@ -487,7 +534,7 @@ public class MainActivity extends Activity {
             card.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    openUrl(p.url);
+                    BrowserActivity.open(MainActivity.this, p.url);
                 }
             });
             card.setOnLongClickListener(new View.OnLongClickListener() {

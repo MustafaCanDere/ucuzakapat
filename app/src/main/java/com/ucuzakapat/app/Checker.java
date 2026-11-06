@@ -40,6 +40,12 @@ public final class Checker {
             p.lastError = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
             return;
         }
+        apply(c, p, r);
+    }
+
+    /** Okunan sonucu urune isler, gerekiyorsa bildirim atar (uygulama ici tarayici da kullanir). */
+    public static void apply(Context c, Product p, PriceFetcher.Result r) {
+        long now = System.currentTimeMillis();
         p.lastCheck = now;
         p.lastError = null;
         if (r.name != null && !r.name.isEmpty()) p.name = r.name;

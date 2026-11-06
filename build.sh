@@ -2,9 +2,9 @@
 # Android Gradle Plugin olmadan, komut satiri araclariyla APK derler.
 set -euo pipefail
 # Yeni surum cikarirken sadece bu iki satiri degistir (versionCode her seferinde artmali)
-VERSION_CODE=3
-VERSION_NAME=1.2
-NOTES="Uygulama içi güncelleme eklendi: yeni sürüm çıkınca uygulama haber verir ve tek dokunuşla günceller."
+VERSION_CODE=4
+VERSION_NAME=1.3
+NOTES="Fiyat okuma düzeltildi: uygulama içi tarayıcı, bot doğrulamasını bir kez geçince arka plan kontrolleri de çalışır; ekranda görünen fiyatı okuma; Trendyol için daha sağlam yöntem."
 ANDROID_JAR=${ANDROID_JAR:-$HOME/dl/android34.jar}
 OUT=build
 rm -rf $OUT && mkdir -p $OUT/{res,gen,classes,dex}

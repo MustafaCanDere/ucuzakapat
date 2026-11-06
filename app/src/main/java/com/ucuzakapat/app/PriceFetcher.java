@@ -35,12 +35,29 @@ public final class PriceFetcher {
         public List<String> campaigns = new ArrayList<String>();
     }
 
-    private static final String UA =
+    private static final String FALLBACK_UA =
             "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36";
+    private static volatile String UA = FALLBACK_UA;
     private static final int MAX_BYTES = 4 * 1024 * 1024;
 
     private PriceFetcher() {}
+
+    /**
+     * Telefonun gercek Chrome surumunu kullan: hem bot korumalari eski/sahte surumu
+     * yakalamasin, hem de uygulama ici tarayicida alinan "dogrulandi" cerezleri
+     * (ayni tarayici kimligiyle) duz isteklerde de gecerli olsun.
+     */
+    public static String userAgent(android.content.Context ctx) {
+        try {
+            String ua = android.webkit.WebSettings.getDefaultUserAgent(ctx);
+            if (ua != null && ua.length() > 20) {
+                UA = ua.replace("; wv)", ")").replace("Version/4.0 ", "");
+            }
+        } catch (Throwable ignored) {
+        }
+        return UA;
+    }
 
     /** Bu siteler duz HTTP istegini neredeyse her zaman engeller; dogrudan tarayiciyla ac. */
     private static boolean browserFirst(String url) {
@@ -50,22 +67,32 @@ public final class PriceFetcher {
     }
 
     /**
-     * Once hizli yol (duz HTTP) denenir; site engellerse veya fiyat bulunamazsa sayfa
-     * gizli bir tarayicida (WebView) acilip JavaScript calistiktan sonra okunur.
+     * Sirayla: (Trendyol ise) Trendyol'un kendi urun API'si, duz HTTP, gizli tarayici.
+     * Hepsi basarisiz olursa en anlamli hata mesaji dondurulur.
      */
     public static Result fetch(android.content.Context ctx, String url) throws IOException {
-        IOException httpError = null;
+        userAgent(ctx);
+        String firstError = null;
+        if (hostOf(url).contains("trendyol") || hostOf(url).contains("ty.gl")) {
+            try {
+                Result r = trendyolApi(url);
+                if (r != null && r.price > 0) return r;
+            } catch (Exception ignored) {
+            }
+        }
         if (!browserFirst(url)) {
             try {
                 return fetch(url);
             } catch (IOException e) {
-                httpError = e;
+                firstError = e.getMessage();
             }
         }
         try {
             return WebFetcher.fetch(ctx, url);
         } catch (IOException e) {
-            throw e;
+            String m = e.getMessage();
+            if (firstError != null && m != null && m.startsWith("Sayfa")) m = firstError;
+            throw new IOException(m + " — ürüne dokunup uygulama içinde bir kez aç, sonra tekrar dene");
         }
     }
 
@@ -74,11 +101,115 @@ public final class PriceFetcher {
         Result r = parse(url, html);
         if (r.price <= 0) {
             if (looksBlocked(html)) {
-                throw new IOException("Site bot korumasina takildi");
+                throw new IOException("Site bot korumasına takıldı");
             }
-            throw new IOException("Fiyat sayfada bulunamadi");
+            throw new IOException("Fiyat sayfada bulunamadı");
         }
         return r;
+    }
+
+    // ---- Trendyol urun API'si (sayfa yerine JSON; bot korumasina daha az takilir)
+    private static final Pattern TY_ID = Pattern.compile("-p-(\\d+)");
+
+    static Result trendyolApi(String url) throws Exception {
+        Matcher m = TY_ID.matcher(url);
+        if (!m.find()) {
+            // ty.gl kisa linki: once gercek adrese yonlen
+            String finalUrl = resolve(url);
+            m = TY_ID.matcher(finalUrl);
+            if (!m.find()) return null;
+        }
+        String id = m.group(1);
+        String[] endpoints = {
+                "https://apigw.trendyol.com/discovery-web-productgw-service/api/productDetail/" + id
+                        + "?storefrontId=1&culture=tr-TR&linearVariants=true",
+                "https://public.trendyol.com/discovery-web-productgw-service/api/productDetail/" + id
+                        + "?storefrontId=1&culture=tr-TR&linearVariants=true",
+        };
+        for (String ep : endpoints) {
+            String json;
+            try {
+                json = download(ep);
+            } catch (IOException e) {
+                continue;
+            }
+            Result r = new Result();
+            try {
+                JSONObject root = new JSONObject(json);
+                JSONObject res = root.optJSONObject("result");
+                if (res == null) res = root;
+                r.name = res.optString("name", null);
+                JSONObject price = res.optJSONObject("price");
+                if (price != null) {
+                    double disc = val(price, "discountedPrice");
+                    double sell = val(price, "sellingPrice");
+                    double orig = val(price, "originalPrice");
+                    r.price = disc > 0 ? disc : sell;
+                    double list = Math.max(orig, sell);
+                    if (list > r.price) r.originalPrice = list;
+                }
+                JSONArray promos = res.optJSONArray("promotions");
+                if (promos != null) {
+                    for (int i = 0; i < promos.length(); i++) {
+                        JSONObject pr = promos.optJSONObject(i);
+                        if (pr == null) continue;
+                        String t = pr.optString("text", pr.optString("name", pr.optString("shortName", "")));
+                        addCampaign(r, t);
+                    }
+                }
+            } catch (Exception e) {
+                r = parse(url, json);
+            }
+            if (r.price > 0) {
+                findCampaigns(json, r);
+                return r;
+            }
+        }
+        return null;
+    }
+
+    private static double val(JSONObject price, String key) {
+        Object o = price.opt(key);
+        if (o instanceof JSONObject) return ((JSONObject) o).optDouble("value", 0);
+        if (o instanceof Number) return ((Number) o).doubleValue();
+        return 0;
+    }
+
+    /** Yonlendirmeleri takip edip son adresi dondurur (kisa linkler icin). */
+    static String resolve(String startUrl) throws IOException {
+        String url = startUrl;
+        for (int hop = 0; hop < 6; hop++) {
+            HttpURLConnection con = open(url);
+            con.setRequestMethod("GET");
+            int code = con.getResponseCode();
+            String loc = con.getHeaderField("Location");
+            con.disconnect();
+            if (code >= 300 && code < 400 && loc != null) {
+                url = new URL(new URL(url), loc).toString();
+            } else {
+                return url;
+            }
+        }
+        return url;
+    }
+
+    private static HttpURLConnection open(String url) throws IOException {
+        HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
+        con.setInstanceFollowRedirects(false);
+        con.setConnectTimeout(20000);
+        con.setReadTimeout(30000);
+        con.setRequestProperty("User-Agent", UA);
+        con.setRequestProperty("Accept",
+                "text/html,application/xhtml+xml,application/xml;q=0.9,application/json;q=0.9,*/*;q=0.8");
+        con.setRequestProperty("Accept-Language", "tr-TR,tr;q=0.9,en;q=0.6");
+        con.setRequestProperty("Accept-Encoding", "gzip");
+        // Uygulama ici tarayicida alinmis cerezleri (bot dogrulamasi dahil) gonder
+        try {
+            String cookies = android.webkit.CookieManager.getInstance().getCookie(url);
+            if (cookies != null && !cookies.isEmpty()) con.setRequestProperty("Cookie", cookies);
+        } catch (Throwable ignored) {
+        }
+        return con;
     }
 
     // ---------------------------------------------------------------- indirme
@@ -86,15 +217,7 @@ public final class PriceFetcher {
     static String download(String startUrl) throws IOException {
         String url = startUrl;
         for (int hop = 0; hop < 6; hop++) {
-            HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
-            con.setInstanceFollowRedirects(false);
-            con.setConnectTimeout(20000);
-            con.setReadTimeout(30000);
-            con.setRequestProperty("User-Agent", UA);
-            con.setRequestProperty("Accept",
-                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-            con.setRequestProperty("Accept-Language", "tr-TR,tr;q=0.9,en;q=0.6");
-            con.setRequestProperty("Accept-Encoding", "gzip");
+            HttpURLConnection con = open(url);
             int code = con.getResponseCode();
             if (code >= 300 && code < 400) {
                 String loc = con.getHeaderField("Location");
@@ -120,7 +243,7 @@ public final class PriceFetcher {
                 // Bazi siteler 403 ile birlikte yine de sayfayi dondurur; fiyat varsa kullan
                 Result probe = parse(url, body);
                 if (probe.price > 0) return body;
-                throw new IOException("Site erisimi reddetti (HTTP " + code + ")");
+                throw new IOException("Site erişimi reddetti (HTTP " + code + ")");
             }
             return body;
         }
